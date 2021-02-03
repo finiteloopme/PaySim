@@ -18,6 +18,14 @@
                     <target>8</target>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.0.0</version>
+                <configuration>
+                    <mainClass>org.paysim.paysim.PaySim</mainClass>
+            </configuration>
+        </plugin>
         </plugins>
     </build>
     <repositories>
