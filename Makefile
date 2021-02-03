@@ -1,4 +1,4 @@
-build: clean
+build: clean compile
 	mvn package
 
 clean:
@@ -6,4 +6,7 @@ clean:
 
 compile:
 	mvn compile
+
+run: build
+	mvn compile exec:java
 
