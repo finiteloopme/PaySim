@@ -36,6 +36,7 @@ public class Client extends SuperActor implements Steppable {
     private int countTransferTransactions = 0;
     private double expectedAvgTransaction = 0;
     private double initialBalance;
+    private Parameters params = Parameters.getInstance();
 
     Client(String name, Bank bank) {
         super(CLIENT_IDENTIFIER + name);
@@ -46,7 +47,7 @@ public class Client extends SuperActor implements Steppable {
         super(CLIENT_IDENTIFIER + paySim.generateId());
         this.bank = paySim.pickRandomBank();
         this.clientProfile = new ClientProfile(paySim.pickNextClientProfile(), paySim.random);
-        this.clientWeight = ((double) clientProfile.getClientTargetCount()) /  Parameters.stepsProfiles.getTotalTargetCount();
+        this.clientWeight = ((double) clientProfile.getClientTargetCount()) /  params.stepsProfiles.getTotalTargetCount();
         this.initialBalance = BalancesClients.pickNextBalance(paySim.random);
         this.balance = initialBalance;
         this.overdraftLimit = pickOverdraftLimit(paySim.random);
@@ -195,9 +196,9 @@ public class Client extends SuperActor implements Steppable {
                 Client clientTo = state.pickRandomClient(getName());
                 double reducedAmount = amount;
                 boolean lastTransferFailed = false;
-                while (reducedAmount > Parameters.transferLimit && !lastTransferFailed) {
-                    lastTransferFailed = !handleTransfer(state, step, Parameters.transferLimit, clientTo);
-                    reducedAmount -= Parameters.transferLimit;
+                while (reducedAmount > params.transferLimit && !lastTransferFailed) {
+                    lastTransferFailed = !handleTransfer(state, step, params.transferLimit, clientTo);
+                    reducedAmount -= params.transferLimit;
                 }
                 if (reducedAmount > 0 && !lastTransferFailed) {
                     handleTransfer(state, step, reducedAmount, clientTo);
@@ -347,7 +348,7 @@ public class Client extends SuperActor implements Steppable {
     private boolean isDetectedAsFraud(double amount) {
         boolean isFraudulentAccount = false;
         if (this.countTransferTransactions >= MIN_NB_TRANSFER_FOR_FRAUD) {
-            if (this.balanceMax - this.balance - amount > Parameters.transferLimit * 2.5) {
+            if (this.balanceMax - this.balance - amount > params.transferLimit * 2.5) {
                 isFraudulentAccount = true;
             }
         } else {

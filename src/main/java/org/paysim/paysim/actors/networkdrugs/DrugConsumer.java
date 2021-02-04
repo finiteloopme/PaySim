@@ -12,12 +12,13 @@ public class DrugConsumer extends Client {
     private DrugDealer dealer;
     private RandomCollection<Double> probAmountProfile;
     private double probabilityBuy;
+    private Parameters params = Parameters.getInstance();
 
     public DrugConsumer(PaySim paySim, DrugDealer dealer, double monthlySpending, RandomCollection<Double> probAmountProfile, double meanTr) {
         super(paySim);
         this.dealer = dealer;
         this.probAmountProfile = probAmountProfile;
-        this.probabilityBuy = monthlySpending / meanTr / Parameters.nbSteps;
+        this.probabilityBuy = monthlySpending / meanTr / params.nbSteps;
     }
 
     @Override

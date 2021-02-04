@@ -14,7 +14,7 @@ public class Fraudster extends SuperActor implements Steppable {
     private static final String FRAUDSTER_IDENTIFIER = "C";
     private double profit = 0;
     private int nbVictims = 0;
-
+    private Parameters params = Parameters.getInstance();
     public Fraudster(String name) {
         super(FRAUDSTER_IDENTIFIER + name);
     }
@@ -23,20 +23,20 @@ public class Fraudster extends SuperActor implements Steppable {
     public void step(SimState state) {
         PaySim paysim = (PaySim) state;
         int step = (int) state.schedule.getSteps();
-        if (paysim.random.nextDouble() < Parameters.fraudProbability) {
+        if (paysim.random.nextDouble() < params.fraudProbability) {
             Client c = paysim.pickRandomClient(getName());
             c.setFraud(true);
             double balance = c.getBalance();
             // create mule client
             if (balance > 0) {
-                int nbTransactions = (int) Math.ceil(balance / Parameters.transferLimit);
+                int nbTransactions = (int) Math.ceil(balance / params.transferLimit);
                 for (int i = 0; i < nbTransactions; i++) {
                     boolean transferFailed;
                     Mule muleClient = new Mule(paysim.generateId(), paysim.pickRandomBank());
                     muleClient.setFraud(true);
-                    if (balance > Parameters.transferLimit) {
-                        transferFailed = !c.handleTransfer(paysim, step, Parameters.transferLimit, muleClient);
-                        balance -= Parameters.transferLimit;
+                    if (balance > params.transferLimit) {
+                        transferFailed = !c.handleTransfer(paysim, step, params.transferLimit, muleClient);
+                        balance -= params.transferLimit;
                     } else {
                         transferFailed = !c.handleTransfer(paysim, step, balance, muleClient);
                         balance = 0;

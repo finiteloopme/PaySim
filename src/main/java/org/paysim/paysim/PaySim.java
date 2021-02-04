@@ -21,6 +21,14 @@ import org.paysim.paysim.base.StepActionProfile;
 
 import org.paysim.paysim.output.Output;
 
+//SpringBoot Framework
+//import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@SpringBootApplication
 public class PaySim extends SimState {
     public static final double PAYSIM_VERSION = 2.0;
     private static final String[] DEFAULT_ARGS = new String[]{"", "-file", "PaySim.properties", "5"};
@@ -38,37 +46,48 @@ public class PaySim extends SimState {
     private int currentStep;
 
     private Map<ClientActionProfile, Integer> countProfileAssignment = new HashMap<>();
-
+    private static Parameters params = null;
 
     public static void main(String[] args) {
-        System.out.println("PAYSIM: Financial Simulator v" + PAYSIM_VERSION);
-        if (args.length < 4) {
-            args = DEFAULT_ARGS;
-        }
-        int nbTimesRepeat = Integer.parseInt(args[3]);
+        
+        String _args[] = DEFAULT_ARGS;
         String propertiesFile = "";
-        for (int x = 0; x < args.length - 1; x++) {
-            if (args[x].equals("-file")) {
-                propertiesFile = args[x + 1];
+        for (int x = 0; x < _args.length - 1; x++) {
+            if (_args[x].equals("-file")) {
+                propertiesFile = _args[x + 1];
             }
         }
-        Parameters.initParameters(propertiesFile);
-        for (int i = 0; i < nbTimesRepeat; i++) {
-            PaySim p = new PaySim();
-            p.runSimulation();
+        params = Parameters.getInstance();
+        params.initParameters(propertiesFile);
+        SpringApplication.run(PaySim.class, _args);
+    }
+
+    @RestController
+    class SimulationController {
+        @GetMapping("/")
+        String startSimulation() {
+            System.out.println("PAYSIM: Financial Simulator v" + PAYSIM_VERSION);
+            String args[] = DEFAULT_ARGS;
+            int nbTimesRepeat = Integer.parseInt(args[3]);
+            for (int i = 0; i < nbTimesRepeat; i++) {
+                PaySim p = new PaySim();
+                p.runSimulation();
+            }
+            return "Started the simulation!";
         }
     }
 
+
     public PaySim() {
-        super(Parameters.getSeed());
+        super(params.getSeed());
         BalancesClients.setRandom(random);
-        Parameters.clientsProfiles.setRandom(random);
+        params.clientsProfiles.setRandom(random);
 
         DateFormat dateFormat = new SimpleDateFormat("yyyyMMddHHmmss");
         Date currentTime = new Date();
         simulationName = "PS_" + dateFormat.format(currentTime) + "_" + seed();
 
-        File simulationFolder = new File(Parameters.outputPath + simulationName);
+        File simulationFolder = new File(params.outputPath + simulationName);
         simulationFolder.mkdirs();
 
         Output.initOutputFilenames(simulationName);
@@ -77,14 +96,14 @@ public class PaySim extends SimState {
 
     private void runSimulation() {
         System.out.println();
-        System.out.println("Starting PaySim Running for " + Parameters.nbSteps + " steps.");
+        System.out.println("Starting PaySim Running for " + params.nbSteps + " steps.");
         long startTime = System.currentTimeMillis();
         super.start();
 
         initCounters();
         initActors();
 
-        while ((currentStep = (int) schedule.getSteps()) < Parameters.nbSteps) {
+        while ((currentStep = (int) schedule.getSteps()) < params.nbSteps) {
             if (!schedule.step(this))
                 break;
 
@@ -108,7 +127,7 @@ public class PaySim extends SimState {
 
     private void initCounters() {
         for (String action : ActionTypes.getActions()) {
-            for (ClientActionProfile clientActionProfile : Parameters.clientsProfiles.getProfilesFromAction(action)) {
+            for (ClientActionProfile clientActionProfile : params.clientsProfiles.getProfilesFromAction(action)) {
                 countProfileAssignment.put(clientActionProfile, 0);
             }
         }
@@ -118,35 +137,35 @@ public class PaySim extends SimState {
         System.out.println("Init - Seed " + seed());
 
         //Add the merchants
-        System.out.println("NbMerchants: " + (int) (Parameters.nbMerchants * Parameters.multiplier));
-        for (int i = 0; i < Parameters.nbMerchants * Parameters.multiplier; i++) {
+        System.out.println("NbMerchants: " + (int) (params.nbMerchants * params.multiplier));
+        for (int i = 0; i < params.nbMerchants * params.multiplier; i++) {
             Merchant m = new Merchant(generateId());
             merchants.add(m);
         }
 
         //Add the fraudsters
-        System.out.println("NbFraudsters: " + (int) (Parameters.nbFraudsters * Parameters.multiplier));
-        for (int i = 0; i < Parameters.nbFraudsters * Parameters.multiplier; i++) {
+        System.out.println("NbFraudsters: " + (int) (params.nbFraudsters * params.multiplier));
+        for (int i = 0; i < params.nbFraudsters * params.multiplier; i++) {
             Fraudster f = new Fraudster(generateId());
             fraudsters.add(f);
             schedule.scheduleRepeating(f);
         }
 
         //Add the banks
-        System.out.println("NbBanks: " + Parameters.nbBanks);
-        for (int i = 0; i < Parameters.nbBanks; i++) {
+        System.out.println("NbBanks: " + params.nbBanks);
+        for (int i = 0; i < params.nbBanks; i++) {
             Bank b = new Bank(generateId());
             banks.add(b);
         }
 
         //Add the clients
-        System.out.println("NbClients: " + (int) (Parameters.nbClients * Parameters.multiplier));
-        for (int i = 0; i < Parameters.nbClients * Parameters.multiplier; i++) {
+        System.out.println("NbClients: " + (int) (params.nbClients * params.multiplier));
+        for (int i = 0; i < params.nbClients * params.multiplier; i++) {
             Client c = new Client(this);
             clients.add(c);
         }
 
-        NetworkDrug.createNetwork(this, Parameters.typologiesFolder + TypologiesFiles.drugNetworkOne);
+        NetworkDrug.createNetwork(this, params.typologiesFolder + TypologiesFiles.drugNetworkOne);
 
         // Do not write code under this part otherwise clients will not be used in simulation
         // Schedule clients to act at each step of the simulation
@@ -158,7 +177,7 @@ public class PaySim extends SimState {
     public Map<String, ClientActionProfile> pickNextClientProfile() {
         Map<String, ClientActionProfile> profile = new HashMap<>();
         for (String action : ActionTypes.getActions()) {
-            ClientActionProfile clientActionProfile = Parameters.clientsProfiles.pickNextActionProfile(action);
+            ClientActionProfile clientActionProfile = params.clientsProfiles.pickNextActionProfile(action);
 
             profile.put(action, clientActionProfile);
 
@@ -170,7 +189,7 @@ public class PaySim extends SimState {
 
     public void finish() {
         Output.writeFraudsters(fraudsters);
-        Output.writeClientsProfiles(countProfileAssignment, (int) (Parameters.nbClients * Parameters.multiplier));
+        Output.writeClientsProfiles(countProfileAssignment, (int) (params.nbClients * params.multiplier));
         Output.writeSummarySimulation(this);
     }
 
@@ -187,8 +206,8 @@ public class PaySim extends SimState {
         totalTransactionsMade += transactions.size();
 
         Output.incrementalWriteRawLog(currentStep, transactions);
-        if (Parameters.saveToDB) {
-            Output.writeDatabaseLog(Parameters.dbUrl, Parameters.dbUser, Parameters.dbPassword, transactions, simulationName);
+        if (params.saveToDB) {
+            Output.writeDatabaseLog(params.dbUrl, params.dbUser, params.dbPassword, transactions, simulationName);
         }
 
         Output.incrementalWriteStepAggregate(currentStep, transactions);
@@ -245,14 +264,14 @@ public class PaySim extends SimState {
     }
 
     public int getStepTargetCount() {
-        return Parameters.stepsProfiles.getTargetCount(currentStep);
+        return params.stepsProfiles.getTargetCount(currentStep);
     }
 
     public Map<String, Double> getStepProbabilities() {
-        return Parameters.stepsProfiles.getProbabilitiesPerStep(currentStep);
+        return params.stepsProfiles.getProbabilitiesPerStep(currentStep);
     }
 
     public StepActionProfile getStepAction(String action) {
-        return Parameters.stepsProfiles.getActionForStep(currentStep, action);
+        return params.stepsProfiles.getActionForStep(currentStep, action);
     }
 }

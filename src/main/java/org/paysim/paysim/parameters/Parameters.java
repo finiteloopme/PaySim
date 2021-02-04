@@ -7,19 +7,30 @@ import java.util.Properties;
 import org.paysim.paysim.output.Output;
 
 public class Parameters {
-    private static String seedString;
-    public static int nbClients, nbMerchants, nbBanks, nbFraudsters, nbSteps;
-    public static double multiplier, fraudProbability, transferLimit;
-    public static String aggregatedTransactions, maxOccurrencesPerClient, initialBalancesDistribution,
+    private String seedString;
+    public int nbClients, nbMerchants, nbBanks, nbFraudsters, nbSteps;
+    public  double multiplier, fraudProbability, transferLimit;
+    public  String aggregatedTransactions, maxOccurrencesPerClient, initialBalancesDistribution,
             overdraftLimits, clientsProfilesFile, transactionsTypes;
-    public static String typologiesFolder, outputPath;
-    public static boolean saveToDB;
-    public static String dbUrl, dbUser, dbPassword;
+    public  String typologiesFolder, outputPath;
+    public  boolean saveToDB;
+    public  String dbUrl, dbUser, dbPassword;
 
-    public static StepsProfiles stepsProfiles;
-    public static ClientsProfiles clientsProfiles;
+    public  StepsProfiles stepsProfiles;
+    public  ClientsProfiles clientsProfiles;
 
-    public static void initParameters(String propertiesFile) {
+    private final String propFile = "PaySim.properties";
+    private static Parameters parameters = new Parameters();
+
+    private Parameters(){
+        initParameters(propFile);
+    }
+
+    public static Parameters getInstance(){
+        return parameters;
+    }
+
+    public  void initParameters(String propertiesFile) {
         loadPropertiesFile(propertiesFile);
 
         ActionTypes.loadActionTypes(transactionsTypes);
@@ -30,11 +41,11 @@ public class Parameters {
         ActionTypes.loadMaxOccurrencesPerClient(maxOccurrencesPerClient);
     }
 
-    private static void loadPropertiesFile(String propertiesFile) {
+    private  void loadPropertiesFile(String propertiesFile) {
         try {
             Properties parameters = new Properties();
-            parameters.load(new FileInputStream(propertiesFile));
-
+            //parameters.load(new FileInputStream("classpath:/" + propertiesFile));
+            parameters.load(this.getClass().getResourceAsStream("/BOOT-INF/classes/src/main/resources/" +propertiesFile));
             seedString = String.valueOf(parameters.getProperty("seed"));
             nbSteps = Integer.parseInt(parameters.getProperty("nbSteps"));
             multiplier = Double.parseDouble(parameters.getProperty("multiplier"));
@@ -66,7 +77,7 @@ public class Parameters {
         }
     }
 
-    public static int getSeed() {
+    public  int getSeed() {
         // /!\ MASON seed is using an int internally
         // https://github.com/eclab/mason/blob/66d38fa58fae3e250b89cf6f31bcfa9d124ffd41/mason/sim/engine/SimState.java#L45
         if (seedString.equals("time")) {
@@ -76,7 +87,7 @@ public class Parameters {
         }
     }
 
-    public static String toString(long seed) {
+    public  String toString(long seed) {
         ArrayList<String> properties = new ArrayList<>();
 
         properties.add("seed=" + seed);

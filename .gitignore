@@ -27,6 +27,9 @@ hs_err_pid*
 .idea/
 .classpath
 .project
+.factorypath
+org.eclipse.*
+settings.json
 
 # Default output folder
 outputs/
