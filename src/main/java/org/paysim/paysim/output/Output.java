@@ -5,7 +5,10 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import org.paysim.paysim.PaySim;
 import org.paysim.paysim.base.StepActionProfile;
@@ -16,6 +19,16 @@ import org.paysim.paysim.parameters.Parameters;
 import org.paysim.paysim.parameters.StepsProfiles;
 import org.paysim.paysim.utils.DatabaseHandler;
 
+import com.google.api.core.ApiFuture;
+import com.google.api.core.ApiFutureCallback;
+import com.google.api.core.ApiFutures;
+import com.google.api.gax.rpc.ApiException;
+import com.google.cloud.pubsub.v1.Publisher;
+import com.google.common.util.concurrent.MoreExecutors;
+import com.google.protobuf.ByteString;
+import com.google.pubsub.v1.PubsubMessage;
+import com.google.pubsub.v1.TopicName;
+
 public class Output {
     public static final int PRECISION_OUTPUT = 2;
     public static final String OUTPUT_SEPARATOR = ",", EOL_CHAR = System.lineSeparator();
@@ -25,19 +38,79 @@ public class Output {
     public static void incrementalWriteRawLog(int step, ArrayList<Transaction> transactions) {
         String rawLogHeader = "step,action,amount,nameOrig,oldBalanceOrig,newBalanceOrig,nameDest,oldBalanceDest,newBalanceDest,isFraud,isFlaggedFraud,isUnauthorizedOverdraft";
         try {
-            BufferedWriter writer = new BufferedWriter(new FileWriter(filenameRawLog, true));
+            //BufferedWriter writer = new BufferedWriter(new FileWriter(filenameRawLog, true));
             if (step == 0) {
-                writer.write(rawLogHeader);
-                writer.newLine();
+                publishToPubsub(rawLogHeader);
+                //writer.write(rawLogHeader);
+                //writer.newLine();
             }
             for (Transaction t : transactions) {
-                writer.write(t.toString());
-                writer.newLine();
+                publishToPubsub(t.toString());
+                //writer.write(t.toString());
+                //writer.newLine();
             }
-            writer.close();
-        } catch (IOException e) {
+            //writer.close();
+        // } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    private static void publishToPubsub(String rawTransaction) throws IOException, InterruptedException{
+        //TODO: fix the hardcoding
+        String projectId = "kl-dev-scratchpad";
+        String topicId = "raw-fin-transactions";
+
+        TopicName topicName = TopicName.of(projectId, topicId);
+        Publisher publisher = null;
+
+        try {
+            // Create a publisher instance with default settings bound to the topic
+            publisher = Publisher.newBuilder(topicName).build();
+      
+            //List<String> messages = Arrays.asList("first message", "second message");
+      
+            //for (final String message : messages) {
+            //   ByteString data = ByteString.copyFromUtf8(message);
+              ByteString data = ByteString.copyFromUtf8(rawTransaction);
+              PubsubMessage pubsubMessage = PubsubMessage.newBuilder().setData(data).build();
+      
+              // Once published, returns a server-assigned message id (unique within the topic)
+              ApiFuture<String> future = publisher.publish(pubsubMessage);
+      
+              // Add an asynchronous callback to handle success / failure
+              ApiFutures.addCallback(
+                  future,
+                  new ApiFutureCallback<String>() {
+      
+                    @Override
+                    public void onFailure(Throwable throwable) {
+                      if (throwable instanceof ApiException) {
+                        ApiException apiException = ((ApiException) throwable);
+                        // details on the API exception
+                        System.out.println(apiException.getStatusCode().getCode());
+                        System.out.println(apiException.isRetryable());
+                      }
+                      //System.out.println("Error publishing message : " + message);
+                      System.out.println("Error publishing message : " + rawTransaction);
+                    }
+      
+                    @Override
+                    public void onSuccess(String messageId) {
+                      // Once published, returns server-assigned message ids (unique within the topic)
+                      System.out.println("Published message ID: " + messageId);
+                    }
+                  },
+                  MoreExecutors.directExecutor());
+            //}
+        } finally {
+            if (publisher != null) {
+              // When finished with the publisher, shutdown to free up resources.
+              publisher.shutdown();
+              publisher.awaitTermination(1, TimeUnit.MINUTES);
+            }
+        }
+
     }
 
     public static void incrementalWriteStepAggregate(int step, ArrayList<Transaction> transactions) {

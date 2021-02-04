@@ -1,4 +1,5 @@
 SERVICE=paysim
+PUBSUB_TOPIC=raw-fin-transactions
 package: clean compile
 	mvn package
 
@@ -25,3 +26,9 @@ deploy: build
 
 delete:
 	gcloud run services delete ${SERVICE}
+
+env-setup:
+	gcloud pubsub topics create ${PUBSUB_TOPIC}
+
+env-clean:
+	gcloud pubsub topics delete ${PUBSUB_TOPIC}
