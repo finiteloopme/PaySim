@@ -26,11 +26,6 @@ c-run: #container-build
 build: package
 	gcloud builds submit --tag gcr.io/${PROJECT_ID}/${SERVICE}
 
-build-df:
-	cd dataflow
-	go vet
-	go fmt
-
 deploy: build env-setup
 	gcloud run deploy --image gcr.io/${PROJECT_ID}/${SERVICE} --platform managed --allow-unauthenticated
 
@@ -48,11 +43,3 @@ env-clean:
 	gcloud pubsub topics delete ${PUBSUB_TOPIC}
 	gsutil rm -rf gs://${GCS_STAGING}
 	gsutil rm -rf gs://${GCS_TEMP}
-
-run-df: 
-	cd dataflow; go run main.go --project=${PROJECT_ID} --runner=dataflow --temp_location=gs://${GCS_TEMP} --staging_location=gs://${GCS_STAGING}
-	# ./target/dataflow \
-	# 	--project=${PROJECT_ID} \
-	# 	--runner=dataflow \
-	# 	--temp_location=gs://${GCS_TEMP} \
-	# 	--staging_location=gs://${GCS_STAGING}
