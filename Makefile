@@ -4,6 +4,8 @@ PUBSUB_TOPIC_SUB=${PUBSUB_TOPIC}-sub
 PROJECT_ID=kl-dev-scratchpad
 GCS_STAGING=${PROJECT_ID}-staging
 GCS_TEMP=${PROJECT_ID}-tmp
+REGION=us-central1
+
 package: clean compile
 	mvn package
 	#cd dataflow; go build -o ../target/dataflow
@@ -27,10 +29,10 @@ build: package
 	gcloud builds submit --tag gcr.io/${PROJECT_ID}/${SERVICE}
 
 deploy: build env-setup
-	gcloud run deploy --image gcr.io/${PROJECT_ID}/${SERVICE} --platform managed --allow-unauthenticated
+	gcloud run deploy --image gcr.io/${PROJECT_ID}/${SERVICE} --platform managed --allow-unauthenticated --quiet
 
 delete: env-clean
-	gcloud run services delete ${SERVICE}
+	gcloud run services delete ${SERVICE} --quiet
 
 env-setup:
 	gcloud pubsub topics create ${PUBSUB_TOPIC}
